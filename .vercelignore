@@ -1,0 +1,10 @@
+# Source footage for scripts/build-walkthrough.sh, not for the browser. The
+# site only ever loads the film the script builds from these, so shipping the
+# originals would put ~100MB behind the CDN that nothing ever requests.
+public/asset/Scene*.mp4
+public/asset/OLD
+
+# Working files
+Ref Images
+prompt.md
+.walkthrough-build

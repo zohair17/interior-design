@@ -245,16 +245,27 @@ export default function Walkthrough() {
 
     const typing = (el) => el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
 
-    // The contact panel keeps its own gesture only while it actually has
-    // somewhere to scroll. Handing it every gesture on sight is what left the
-    // last beat with no way back on a phone, where the form fits the screen.
-    const scrolls = (target) => {
+    const panelAt = (target) => {
       const panel = target?.closest?.(".contact-layout");
-      return !!panel && panel.scrollHeight > panel.clientHeight + 2;
+      return panel && panel.scrollHeight > panel.clientHeight + 2 ? panel : null;
+    };
+
+    // The contact panel keeps a gesture only while it still has room to move
+    // that way. Owning every gesture on sight is what stranded the last beat:
+    // with the form parked at its top edge an upward scroll scrolled nothing
+    // and never reached the deck, so there was no way back to About.
+    const room = (panel, dir) =>
+      dir > 0
+        ? panel.scrollTop < panel.scrollHeight - panel.clientHeight - 1
+        : panel.scrollTop > 1;
+
+    const scrolls = (target, dir) => {
+      const panel = panelAt(target);
+      return !!panel && room(panel, dir);
     };
 
     const onWheel = (e) => {
-      if (scrolls(e.target)) return;
+      if (scrolls(e.target, e.deltaY > 0 ? 1 : -1)) return;
       e.preventDefault();
       if (Math.abs(e.deltaY) < WHEEL_MIN) return;
       gesture(e.deltaY > 0 ? 1 : -1);
@@ -271,19 +282,26 @@ export default function Walkthrough() {
     };
 
     let touchY = null;
+    let touchPanel = null;
     const onTouchStart = (e) => {
-      touchY = scrolls(e.target) ? null : e.touches[0].clientY;
+      touchY = e.touches[0].clientY;
+      // Which way the finger will go is not known yet, so remember the panel
+      // and decide once the move has a direction.
+      touchPanel = panelAt(e.target);
     };
     const onTouchMove = (e) => {
       if (touchY === null) return;
       const dy = touchY - e.touches[0].clientY;
       if (Math.abs(dy) < SWIPE) return;
+      const dir = dy > 0 ? 1 : -1;
+      if (touchPanel && room(touchPanel, dir)) return;
       // One swipe moves one scene, however far the finger keeps travelling.
       touchY = null;
-      gesture(dy > 0 ? 1 : -1);
+      gesture(dir);
     };
     const onTouchEnd = () => {
       touchY = null;
+      touchPanel = null;
     };
 
     window.addEventListener("wheel", onWheel, { passive: false });
