@@ -141,7 +141,8 @@ body {
   position: absolute;
   inset: 0;
   z-index: 5;
-  will-change: opacity, transform;
+  /* Promotion is switched on per layer as it comes into view, not left on for
+     all twelve at once. */
 }
 
 .slide-copy {
@@ -670,6 +671,10 @@ body {
   }
   .contact-layout {
     gap: 1.75rem;
+    /* Only bites on a screen too short for the form; the gesture handler asks
+       whether this actually scrolled before giving up the swipe. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .contact-lines {
     margin-top: 1.25rem;

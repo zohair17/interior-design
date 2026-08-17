@@ -23,6 +23,13 @@ const WHEEL_MIN = 4;
 /** Swipe distance, in px, that counts as one gesture. */
 const SWIPE = 48;
 const FRAME = 1 / 24;
+/**
+ * Playback rates a forward glide may use instead of seeking frame by frame.
+ * Outside this band — a tiny nudge, or a jump across the whole film from the
+ * rail — seeking is still the better tool.
+ */
+const PLAY_MIN = 0.25;
+const PLAY_MAX = 3;
 
 /** Where each beat parks the playhead: on its own landing point. */
 const LAND = beats.map((beat) => clamp(beat.at / DURATION, 0, 1));
@@ -63,6 +70,8 @@ export default function Walkthrough() {
 
   const videoRef = useRef(null);
   const copies = useRef([]);
+  const shown = useRef([]);
+  const playing = useRef(false);
   const barRef = useRef(null);
   const prog = useRef(0);
   const raf = useRef(0);
@@ -80,7 +89,11 @@ export default function Walkthrough() {
     const now = performance.now();
     const tw = tween.current;
     const k = tw.dur > 0 ? clamp((now - tw.start) / tw.dur, 0, 1) : 1;
-    prog.current = tw.dur > 0 ? tw.from + (tw.to - tw.from) * ease(k) : tw.to;
+    // A played scene advances at a constant rate, so the captions and the
+    // progress bar must too, or the copy would run ahead of the footage in the
+    // middle of the glide. A scrubbed one is free to ease.
+    const eased = tw.linear ? k : ease(k);
+    prog.current = tw.dur > 0 ? tw.from + (tw.to - tw.from) * eased : tw.to;
     const p = prog.current;
     const t = p * DURATION;
     const moving = k < 1;
@@ -90,7 +103,14 @@ export default function Walkthrough() {
       if (!el) continue;
       const { o, dy } = copyAt(beats[i], t, i === 0, i === LAST);
       const show = o > 0.004;
-      el.style.visibility = show ? "visible" : "hidden";
+      if (shown.current[i] !== show) {
+        shown.current[i] = show;
+        el.style.visibility = show ? "visible" : "hidden";
+        // Only the layer actually on screen earns a compositor layer. Twelve
+        // promoted full-screen layers is memory a phone would rather spend on
+        // decoding the film.
+        el.style.willChange = show ? "opacity, transform" : "auto";
+      }
       if (show) {
         el.style.opacity = o;
         el.style.transform = `translate3d(0, ${dy.toFixed(1)}px, 0)`;
@@ -101,7 +121,15 @@ export default function Walkthrough() {
 
     const video = videoRef.current;
     let waiting = false;
-    if (video && !seeking.current) {
+    if (video && playing.current) {
+      // The decoder is running the scene itself; leave it alone until the glide
+      // is over, then stop it exactly on the beat's frame.
+      if (!moving) {
+        playing.current = false;
+        video.pause();
+        video.currentTime = clamp(t, 0, (video.duration || DURATION) - FRAME);
+      }
+    } else if (video && !seeking.current) {
       if (video.readyState < 1) {
         waiting = true;
       } else {
@@ -142,12 +170,30 @@ export default function Walkthrough() {
       const crossed = Math.abs(to - from) * DURATION;
       // Reduced motion gets the destination without the ride.
       const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      tween.current = {
-        from,
-        to,
-        start: performance.now(),
-        dur: still || crossed < 0.01 ? 0 : clamp(crossed * PACE, MIN_GLIDE, MAX_GLIDE),
-      };
+      const dur = still || crossed < 0.01 ? 0 : clamp(crossed * PACE, MIN_GLIDE, MAX_GLIDE);
+
+      // Play the scene rather than seeking through it. Sequential decode is
+      // what video hardware is built for; a seek per animation frame is what
+      // made this stutter on phones. Only forward, only at a sane rate — the
+      // rest still scrubs, and either way the beat lands on the same frame.
+      const video = videoRef.current;
+      const rate = dur > 0 ? crossed / (dur / 1000) : 0;
+      const canPlay =
+        video && to > from && dur > 0 && rate >= PLAY_MIN && rate <= PLAY_MAX && video.readyState >= 2;
+
+      tween.current = { from, to, start: performance.now(), dur, linear: canPlay };
+
+      if (canPlay) {
+        video.playbackRate = rate;
+        playing.current = true;
+        Promise.resolve(video.play()).catch(() => {
+          playing.current = false;
+        });
+      } else if (video) {
+        playing.current = false;
+        if (!video.paused) video.pause();
+      }
+
       cursor.current = n;
       setActive(beats[n].index);
       // Nothing is pinned to the footage while the footage is moving: the wall
@@ -199,9 +245,16 @@ export default function Walkthrough() {
 
     const typing = (el) => el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
 
+    // The contact panel keeps its own gesture only while it actually has
+    // somewhere to scroll. Handing it every gesture on sight is what left the
+    // last beat with no way back on a phone, where the form fits the screen.
+    const scrolls = (target) => {
+      const panel = target?.closest?.(".contact-layout");
+      return !!panel && panel.scrollHeight > panel.clientHeight + 2;
+    };
+
     const onWheel = (e) => {
-      // The contact form scrolls itself on short screens; leave it alone.
-      if (e.target.closest?.(".contact-form")) return;
+      if (scrolls(e.target)) return;
       e.preventDefault();
       if (Math.abs(e.deltaY) < WHEEL_MIN) return;
       gesture(e.deltaY > 0 ? 1 : -1);
@@ -219,7 +272,7 @@ export default function Walkthrough() {
 
     let touchY = null;
     const onTouchStart = (e) => {
-      touchY = e.target.closest?.(".contact-form") ? null : e.touches[0].clientY;
+      touchY = scrolls(e.target) ? null : e.touches[0].clientY;
     };
     const onTouchMove = (e) => {
       if (touchY === null) return;

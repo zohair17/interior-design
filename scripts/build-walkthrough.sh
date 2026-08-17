@@ -77,12 +77,14 @@ for entry in "${SCENES[@]}"; do
   echo "  ${file} -> ${dur}s"
 done
 
-# -g 3 keeps seeks cheap without the size blow-up of an all-keyframe encode;
-# the scrub eases in small steps, so at most two frames are ever re-decoded.
+# Keyframe every 6 frames — a quarter second. Denser than this (the -g 3 this
+# started at) buys nothing the scrub can feel and costs a third of the bitrate,
+# which phones pay for twice: once downloading, once parsing. CRF is unchanged,
+# so every frame is encoded to the same quality either way.
 (
   cd "$WORK"
   "$FFMPEG" -v error -y -f concat -safe 0 -i list.txt \
-    -an -c:v libx264 -preset slow -crf 23 -g 3 -keyint_min 1 -sc_threshold 0 \
+    -an -c:v libx264 -preset slow -crf 23 -g 6 -keyint_min 1 -sc_threshold 0 \
     -pix_fmt yuv420p -movflags +faststart "$SRC/walkthrough.mp4"
 )
 
