@@ -1,26 +1,700 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------
+   MILO INTERIEUR - design tokens
+   ------------------------------------------------------------------ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink: #0b0b0c;
+  --ink-soft: #17181a;
+  --bone: #f4f2ee;
+  --bone-dim: #ddd8cf;
+  --line-inverse: rgba(244, 242, 238, 0.18);
+
+  --background: var(--ink);
+  --foreground: var(--bone);
 }
 
 @theme inline {
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-bone: var(--bone);
+  --color-bone-dim: var(--bone-dim);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-archivo);
+  --font-serif: var(--font-instrument);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ------------------------------------------------------------------
+   Base
+   ------------------------------------------------------------------ */
+* {
+  min-width: 0;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-synthesis-weight: none;
+  overflow: hidden;
+}
+
+::selection {
+  background: var(--bone);
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------
+   Typography
+   ------------------------------------------------------------------ */
+.font-display {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 0.92;
+  text-wrap: balance;
+}
+
+.eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: rgba(244, 242, 238, 0.78);
+}
+
+.rule-label {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+}
+
+/* Film grain - pure CSS, no asset request. */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: -120%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
+  opacity: 0.12;
+  animation: grain 5s steps(6) infinite;
+}
+
+@keyframes grain {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  16% { transform: translate3d(-4%, -3%, 0); }
+  33% { transform: translate3d(3%, -5%, 0); }
+  50% { transform: translate3d(-2%, 4%, 0); }
+  66% { transform: translate3d(5%, 2%, 0); }
+  83% { transform: translate3d(-5%, -1%, 0); }
+}
+
+/* ==================================================================
+   The deck: one film, one caption at a time
+   ================================================================== */
+.deck {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--bone);
+}
+
+.slide-media {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+/* Full bleed by default; a beat with its own camera overrides the four box
+   properties from JS, and the transition turns that swap into a move. */
+.slide-media video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Tailwind's base clamps media to `max-width: 100%`, which silently pins a
+     pulled-back camera to the container width and crops the frame instead. */
+  max-width: none;
+  max-height: none;
+  display: block;
+  object-fit: cover;
+}
+
+/* Just enough grade for white type to hold over the footage. */
+.slide-grade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right, rgba(11, 11, 12, 0.72) 0%, rgba(11, 11, 12, 0.28) 52%, rgba(11, 11, 12, 0.42) 100%),
+    linear-gradient(to top, rgba(11, 11, 12, 0.62) 0%, rgba(11, 11, 12, 0.08) 46%, rgba(11, 11, 12, 0.5) 100%);
+}
+
+/* Chapter copy sits over the one continuous film; only opacity separates them. */
+.slide-copy-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  will-change: opacity, transform;
+}
+
+.slide-copy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 7rem 1.75rem 6rem;
+}
+.slide-copy--center {
+  align-items: center;
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .slide-copy { padding: 7rem 4rem 6rem; }
+}
+@media (min-width: 1280px) {
+  .slide-copy { padding: 7rem 6rem 6rem; }
+}
+
+.slide-head {
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 400;
+  line-height: 1.0;
+  letter-spacing: -0.018em;
+  font-size: clamp(2.4rem, 5vw, 4.4rem);
+  margin-top: 1.15rem;
+  text-wrap: balance;
+  color: var(--bone);
+  /* Wide and soft: lifts the type off the footage without reading as a shadow. */
+  text-shadow: 0 2px 40px rgba(11, 11, 12, 0.55);
+}
+
+.slide-lead {
+  margin-top: 1.5rem;
+  max-width: 36rem;
+  font-size: clamp(1rem, 1.12vw, 1.15rem);
+  line-height: 1.65;
+  color: rgba(244, 242, 238, 0.84);
+  text-shadow: 0 1px 24px rgba(11, 11, 12, 0.5);
+}
+
+.service-copy {
+  max-width: 42rem;
+}
+
+/* Intro title card */
+.intro-logo {
+  width: clamp(260px, 30vw, 460px);
+  height: auto;
+}
+
+/* ==================================================================
+   Scene 9 - the portfolio wall
+   ================================================================== */
+.wall-label {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  color: rgba(244, 242, 238, 0.8);
+}
+.wall-rule {
+  flex: 1;
+  height: 1px;
+  background: rgba(244, 242, 238, 0.24);
+}
+
+.wall-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wall-grid li {
+  min-height: 0;
+}
+
+.wall-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--ink);
+  border: 1px solid rgba(11, 11, 12, 0.85);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.14),
+    0 22px 44px rgba(11, 11, 12, 0.42);
+}
+.wall-shot {
+  object-fit: cover;
+  transition: filter 500ms ease;
+}
+.wall-frame:hover .wall-shot,
+.wall-frame:focus-visible .wall-shot {
+  filter: brightness(1.08);
+}
+.wall-frame:focus-visible {
+  outline: 1px solid var(--bone);
+  outline-offset: 3px;
+}
+
+.wall-caption {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  padding: 1.6rem 0.75rem 0.6rem;
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bone);
+  background: linear-gradient(to top, rgba(11, 11, 12, 0.82), transparent);
+  opacity: 0;
+  transition: opacity 350ms ease;
+}
+.wall-frame:hover .wall-caption,
+.wall-frame:focus-visible .wall-caption {
+  opacity: 1;
+}
+
+/* ==================================================================
+   Scene 10 - the print on the wall, and the values beside it
+   ================================================================== */
+.wall-print {
+  overflow: hidden;
+  background: var(--ink-soft);
+  /* Seats the print in the frame even where the frame's own border is only a
+     couple of pixels wide, which is what a pulled-back camera leaves. */
+  box-shadow:
+    0 0 0 1px rgba(11, 11, 12, 0.9),
+    0 24px 60px rgba(11, 11, 12, 0.5);
+}
+
+.values-copy {
+  /* Never wide enough to reach the print hanging on the right half. */
+  align-items: flex-start;
+  max-width: min(46rem, 52vw);
+}
+.values-head {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.025em;
+  line-height: 1.0;
+  font-size: clamp(1.9rem, 4.2vw, 3.5rem);
+  margin-top: 1rem;
+}
+.values-name {
+  margin-top: 1.7rem;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: clamp(1.25rem, 1.9vw, 1.65rem);
+}
+.values-role {
+  margin-top: 0.4rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+  color: rgba(244, 242, 238, 0.68);
+}
+
+.ghost-button {
+  margin-top: 2rem;
+  align-self: flex-start;
+  border: 1px solid rgba(244, 242, 238, 0.34);
+  padding: 0.85rem 1.9rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone);
+  transition: background-color 300ms, color 300ms, border-color 300ms;
+  cursor: pointer;
+}
+.ghost-button:hover {
+  background: var(--bone);
+  border-color: var(--bone);
+  color: var(--ink);
+}
+
+/* ==================================================================
+   Scene 11 - the contact form
+   ================================================================== */
+.contact-layout {
+  display: grid;
+  align-content: center;
+  gap: 2.5rem;
+}
+@media (min-width: 1024px) {
+  .contact-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+    gap: 5rem;
+    align-items: center;
+  }
+}
+.contact-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(11, 11, 12, 0.78) 6%, rgba(11, 11, 12, 0.34) 62%, rgba(11, 11, 12, 0.5) 100%);
+  z-index: -1;
+}
+
+.contact-lines {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+.contact-lines a {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: clamp(1.3rem, 2.2vw, 1.95rem);
+  transition: opacity 300ms;
+}
+.contact-lines a:hover {
+  opacity: 0.7;
+}
+
+.contact-offices {
+  margin-top: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.5rem;
+  font-size: 0.8125rem;
+  color: rgba(244, 242, 238, 0.66);
+}
+.contact-offices .rule-label {
+  color: rgba(244, 242, 238, 0.45);
+  margin-bottom: 0.35rem;
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  max-width: 28rem;
+  width: 100%;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.field .rule-label {
+  color: rgba(244, 242, 238, 0.5);
+}
+.field input,
+.field textarea {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(244, 242, 238, 0.26);
+  padding: 0.45rem 0;
+  color: var(--bone);
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: none;
+  transition: border-color 300ms;
+}
+.field input:focus,
+.field textarea:focus {
+  outline: none;
+  border-bottom-color: var(--bone);
+}
+
+.contact-send {
+  margin-top: 0.5rem;
+}
+.contact-note {
+  font-size: 0.75rem;
+  color: rgba(244, 242, 238, 0.55);
+  min-height: 1.2em;
+}
+
+/* ==================================================================
+   Chrome: header, rail, counter, progress, cue
+   ================================================================== */
+.deck-header {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.75rem;
+  color: var(--bone);
+}
+@media (min-width: 768px) {
+  .deck-header { padding: 1.5rem 4rem; }
+}
+
+.deck-rail {
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+.deck-rail ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  align-items: flex-end;
+}
+.deck-rail button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: rgba(244, 242, 238, 0.45);
+  transition: color 300ms;
+  cursor: pointer;
+}
+.deck-rail button:hover,
+.deck-rail button[data-active="true"] {
+  color: var(--bone);
+}
+.deck-dot {
+  order: 2;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  transition: background 300ms;
+}
+.deck-rail button[data-active="true"] .deck-dot {
+  background: var(--bone);
+}
+.deck-dot-label {
+  order: 1;
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateX(8px);
+  transition: opacity 300ms, transform 300ms;
+  white-space: nowrap;
+}
+.deck-rail button:hover .deck-dot-label,
+.deck-rail button[data-active="true"] .deck-dot-label {
+  opacity: 1;
+  transform: none;
+}
+
+.deck-counter {
+  position: absolute;
+  left: 1.75rem;
+  bottom: 2rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  font-variant-numeric: tabular-nums;
+  color: var(--bone);
+}
+.deck-counter-rule {
+  width: 3rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.35;
+}
+.deck-counter-total {
+  opacity: 0.5;
+}
+
+.deck-progress {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 20;
+  height: 2px;
+  background: rgba(244, 242, 238, 0.14);
+}
+.deck-progress span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left;
+  transform: scaleX(0);
+  background: var(--bone);
+}
+
+.deck-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 1.75rem;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  color: rgba(244, 242, 238, 0.55);
+  transition: color 300ms;
+  cursor: pointer;
+}
+.deck-cue:hover { color: var(--bone); }
+.deck-cue-line {
+  position: relative;
+  display: block;
+  width: 1px;
+  height: 2.5rem;
+  overflow: hidden;
+  background: rgba(244, 242, 238, 0.2);
+}
+.deck-cue-line .cue-run {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 50%;
+  background: var(--bone);
+  animation: cue 1.9s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes cue {
+  0% { transform: translateY(-100%); }
+  55%, 100% { transform: translateY(200%); }
+}
+
+@media (max-width: 1023px) {
+  .deck-dot-label { display: none; }
+  .deck-cue { display: none; }
+}
+
+/* ==================================================================
+   Phones
+   ------------------------------------------------------------------
+   Framing is handled by the camera in JS, not here: the portfolio grid
+   moves to two columns of the same wall, and the About beat pulls back
+   until the whole picture frame is in shot. What is left for CSS is
+   type — sized in px, because a viewport-width clamp collapses to
+   unreadable at 390px — and where the copy sits.
+   ================================================================== */
+@media (max-width: 767px) {
+  /* A beat with its own camera moves the film. Everything pinned to the film
+     moves on exactly the same curve and duration, so a print stays inside its
+     frame for every millisecond of the move rather than only at both ends.
+     (Desktop has no camera changes, so it needs no transition — and without
+     one, a window resize can never leave the two out of step.) */
+  .slide-media video,
+  .wall-print,
+  .wall-grid,
+  .wall-label {
+    transition:
+      left 900ms cubic-bezier(0.16, 1, 0.3, 1),
+      top 900ms cubic-bezier(0.16, 1, 0.3, 1),
+      width 900ms cubic-bezier(0.16, 1, 0.3, 1),
+      height 900ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  /* All the copy is bottom-weighted here, so the grade is too — that keeps the
+     middle of the frame clear, where the wall and the prints on it live, and
+     hides the edge where a pulled-back camera stops covering the screen. */
+  .slide-grade {
+    background: linear-gradient(
+      to top,
+      rgba(11, 11, 12, 0.9) 0%,
+      rgba(11, 11, 12, 0.6) 30%,
+      rgba(11, 11, 12, 0.34) 47%,
+      rgba(11, 11, 12, 0.06) 70%,
+      rgba(11, 11, 12, 0.36) 100%
+    );
+  }
+  /* The tagline wraps to two lines at this width; the wordmark says it. */
+  .header-tagline {
+    display: none;
+  }
+  .slide-copy {
+    /* Extra room on the right so nothing runs under the chapter rail. */
+    padding: 5.75rem 2.4rem 4.5rem 1.35rem;
+  }
+  .slide-head {
+    font-size: clamp(1.95rem, 8.4vw, 2.7rem);
+    margin-top: 0.9rem;
+  }
+  .slide-lead {
+    margin-top: 1.1rem;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    max-width: none;
+  }
+  .eyebrow {
+    font-size: 0.625rem;
+    letter-spacing: 0.26em;
+  }
+  .intro-logo {
+    width: min(70vw, 300px);
+  }
+  .slide-copy--center .rule-label {
+    font-size: 0.5625rem;
+    letter-spacing: 0.16em;
+  }
+
+  /* There is no hover on a phone, so the frame captions simply stay on. */
+  .wall-caption {
+    opacity: 1;
+    padding: 1.1rem 0.5rem 0.4rem;
+    font-size: 0.5rem;
+    letter-spacing: 0.14em;
+  }
+  .wall-label .rule-label,
+  .wall-label .eyebrow {
+    font-size: 0.5625rem;
+    letter-spacing: 0.18em;
+  }
+
+  /* The About camera ends the film above this, so the copy takes the ink. */
+  .values-copy--below {
+    justify-content: flex-end;
+    max-width: none;
+  }
+  .values-head {
+    font-size: clamp(1.7rem, 7.6vw, 2.4rem);
+  }
+  .values-name {
+    margin-top: 1.1rem;
+  }
+  .ghost-button {
+    margin-top: 1.5rem;
+  }
+
+  /* Contact: the form is the point on a phone, so the prose steps aside. */
+  .contact-layout .slide-lead,
+  .contact-offices {
+    display: none;
+  }
+  .contact-layout {
+    gap: 1.75rem;
+  }
+  .contact-lines {
+    margin-top: 1.25rem;
+    gap: 0.25rem;
+  }
+  .contact-form {
+    max-width: none;
+    gap: 1rem;
+  }
+
+  .deck-counter {
+    left: 1.35rem;
+    bottom: 1.35rem;
+  }
+  .deck-rail {
+    right: 0.85rem;
+  }
+  .deck-rail ul {
+    gap: 0.6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grain::after,
+  .cue-run {
+    animation: none;
+  }
 }

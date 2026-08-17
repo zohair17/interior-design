@@ -1,0 +1,1 @@
+Acha Milo ki picture Fix frame mai rahay gi matlab aesa na ho kai movement par hut rahi hai.. aesa lagay kai already usi frame mai majod hai/
