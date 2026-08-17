@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { clamp, smoothstep } from "@/lib/math";
-import { beats, chapters, DURATION, WALKTHROUGH } from "@/lib/chapters";
+import { beats, chapters, DURATION, WALKTHROUGH, WALKTHROUGH_REV } from "@/lib/chapters";
 import { FILM, useFilmBox, useIsNarrow } from "@/lib/film";
 import SiteHeader from "@/components/SiteHeader";
 import PortfolioWall from "@/components/PortfolioWall";
@@ -30,13 +30,6 @@ const FRAME = 1 / 24;
  */
 const PLAY_MIN = 0.25;
 const PLAY_MAX = 3;
-/**
- * Going back, the film cuts to just short of the destination and plays the last
- * moment of that scene into the park. Video decoders cannot run backwards: a
- * reverse scrub is one seek per frame, each decoding from the keyframe before
- * it, which is what made scrolling back stutter. This costs one seek instead.
- */
-const REWIND = 0.42;
 /** Floor on scrub seeks, so a slow decoder is never handed a queue of them. */
 const SEEK_GAP = 66;
 
@@ -77,6 +70,20 @@ export default function Walkthrough() {
   const camera = narrow ? chapters[active].mobileCamera : undefined;
   const box = useFilmBox(camera);
 
+  // Without a camera the stylesheet's full-bleed fit is already right, and
+  // leaving it to CSS means the first paint needs no measurement. Both films
+  // take the same one, so swapping between them changes nothing on screen.
+  const mediaStyle = camera
+    ? {
+        left: box.x,
+        top: box.y,
+        right: "auto",
+        bottom: "auto",
+        width: FILM.w * box.scale,
+        height: FILM.h * box.scale,
+      }
+    : undefined;
+
   const videoRef = useRef(null);
   const copies = useRef([]);
   const shown = useRef([]);
@@ -92,6 +99,27 @@ export default function Walkthrough() {
   const lastInput = useRef(0);
   const tween = useRef({ from: 0, to: 0, start: 0, dur: 0 });
   const lastSeek = useRef(0);
+  /** The reversed film, and whether it is the one on screen. */
+  const revRef = useRef(null);
+  const revOn = useRef(false);
+  /** A landing seek on the forward film, waiting to be shown. */
+  const swapping = useRef(false);
+
+  /**
+   * Lights one film and darkens the other. Nothing else moves: they are the
+   * same footage in the same place, so whichever is lit shows the same frame.
+   */
+  const face = useCallback((toRev) => {
+    revOn.current = toRev;
+    if (videoRef.current) videoRef.current.dataset.off = toRev ? "true" : "false";
+    if (revRef.current) revRef.current.dataset.off = toRev ? "false" : "true";
+  }, []);
+
+  /** Mirror time: where t on the walkthrough sits on the reversed film. */
+  const mirror = useCallback((rev, t) => {
+    const d = rev.duration || DURATION;
+    return clamp(d - t, 0, d - FRAME);
+  }, []);
 
   const paint = useCallback(function frame() {
     raf.current = 0;
@@ -130,8 +158,27 @@ export default function Walkthrough() {
     if (barRef.current) barRef.current.style.transform = `scaleX(${p.toFixed(4)})`;
 
     const video = videoRef.current;
+    const rev = revRef.current;
     let waiting = false;
-    if (video && playing.current) {
+    if (rev && playing.current && revOn.current) {
+      // The reversed film is running. It stops where the destination beat sits
+      // on it, and the forward film — seeked to that same frame while this one
+      // is still on screen — takes the screen back without a visible jump.
+      const end = mirror(rev, tw.to * DURATION);
+      if (!moving || rev.currentTime >= end - FRAME * 0.5) {
+        playing.current = false;
+        rev.pause();
+        const want = clamp(tw.to * DURATION, 0, (video?.duration || DURATION) - FRAME);
+        if (!video || Math.abs(video.currentTime - want) < FRAME * 0.5) {
+          face(false);
+        } else {
+          swapping.current = true;
+          seeking.current = true;
+          video.currentTime = want;
+        }
+        if (moving) tween.current = { ...tw, dur: 0 };
+      }
+    } else if (video && playing.current) {
       // The decoder is running the scene itself. Stop it on its own clock as
       // well as the tween's: playback overruns by a frame or two, and a frame
       // past the mark is the next scene showing through.
@@ -146,7 +193,7 @@ export default function Walkthrough() {
         // The copy lands with the film rather than a beat behind it.
         if (moving) tween.current = { ...tw, dur: 0 };
       }
-    } else if (video && !seeking.current && (!moving || now - lastSeek.current >= SEEK_GAP)) {
+    } else if (video && !revOn.current && !seeking.current && (!moving || now - lastSeek.current >= SEEK_GAP)) {
       if (video.readyState < 1) {
         waiting = true;
       } else {
@@ -164,6 +211,13 @@ export default function Walkthrough() {
     if (!moving && settled.current !== cursor.current) {
       settled.current = cursor.current;
       setArrived(cursor.current);
+      // Park the reversed film on the mirror of this frame while nothing is
+      // happening, so scrolling back starts moving on the gesture rather than
+      // after a seek.
+      if (rev && !revOn.current && rev.readyState >= 1) {
+        const want = mirror(rev, t);
+        if (Math.abs(rev.currentTime - want) >= FRAME) rev.currentTime = want;
+      }
     }
 
     // One flick of a trackpad fires dozens of wheel events. The lock holds until
@@ -174,7 +228,7 @@ export default function Walkthrough() {
     }
 
     if (moving || waiting || locked.current) raf.current = requestAnimationFrame(frame);
-  }, []);
+  }, [face, mirror]);
 
   const schedule = useCallback(() => {
     if (!raf.current) raf.current = requestAnimationFrame(paint);
@@ -195,38 +249,40 @@ export default function Walkthrough() {
       // made this stutter on phones. Only forward, only at a sane rate — the
       // rest still scrubs, and either way the beat lands on the same frame.
       const video = videoRef.current;
+      const rev = revRef.current;
       const rate = dur > 0 ? crossed / (dur / 1000) : 0;
-      const ready = video && video.readyState >= 2 && dur > 0;
-      const canPlay = ready && to > from && rate >= PLAY_MIN && rate <= PLAY_MAX;
-      // Backwards is the same trick from the other side: one seek to a moment
-      // short of the destination, then let it play in. Scrubbing back frame by
-      // frame is what lagged.
-      const canRewind = ready && to < from && crossed > REWIND;
+      const sane = dur > 0 && rate >= PLAY_MIN && rate <= PLAY_MAX;
+      const canPlay = video && video.readyState >= 2 && to > from && sane;
+      // Backwards runs the reversed encode forwards, which is the only way a
+      // decoder can play footage in reverse. Until that file has arrived the
+      // old scrub still handles it.
+      const canReverse = rev && rev.readyState >= 2 && to < from && sane;
 
-      if (canRewind) {
-        const land = to * DURATION;
-        seeking.current = true;
-        lastSeek.current = performance.now();
-        video.currentTime = Math.max(0, land - REWIND);
-      }
+      tween.current = { from, to, start: performance.now(), dur, linear: canPlay || canReverse };
 
-      tween.current = {
-        from,
-        to,
-        start: performance.now(),
-        dur: canRewind ? Math.max(dur * 0.6, REWIND * 1000) : dur,
-        linear: canPlay || canRewind,
-      };
-
-      if (canPlay || canRewind) {
-        video.playbackRate = canRewind ? 1 : rate;
+      if (canReverse) {
+        const want = mirror(rev, from * DURATION);
+        if (Math.abs(rev.currentTime - want) >= FRAME) rev.currentTime = want;
+        if (video && !video.paused) video.pause();
+        face(true);
+        rev.playbackRate = rate;
+        playing.current = true;
+        Promise.resolve(rev.play()).catch(() => {
+          playing.current = false;
+          face(false);
+        });
+      } else if (canPlay) {
+        if (revOn.current) face(false);
+        video.playbackRate = rate;
         playing.current = true;
         Promise.resolve(video.play()).catch(() => {
           playing.current = false;
         });
-      } else if (video) {
+      } else {
         playing.current = false;
-        if (!video.paused) video.pause();
+        if (revOn.current) face(false);
+        if (rev && !rev.paused) rev.pause();
+        if (video && !video.paused) video.pause();
       }
 
       cursor.current = n;
@@ -236,7 +292,7 @@ export default function Walkthrough() {
       setArrived(-1);
       schedule();
     },
-    [schedule],
+    [face, mirror, schedule],
   );
 
   const go = useCallback(
@@ -263,10 +319,29 @@ export default function Walkthrough() {
     // The film is scrubbed, never played.
     const onSeeked = () => {
       seeking.current = false;
+      // A landing seek: that frame is ready now, so the forward film can take
+      // the screen back from the reversed one.
+      if (swapping.current) {
+        swapping.current = false;
+        face(false);
+      }
       schedule();
     };
     video?.addEventListener("seeked", onSeeked);
     video?.addEventListener("loadedmetadata", onSeeked);
+
+    // The reverse is only wanted once someone scrolls back, and it weighs the
+    // same as the film itself — so it waits for the film it mirrors rather than
+    // competing with it for the connection.
+    const rev = revRef.current;
+    const fetchRev = () => {
+      if (!rev || rev.preload === "auto") return;
+      rev.preload = "auto";
+      rev.load();
+    };
+    if (video && video.readyState >= 4) fetchRev();
+    else video?.addEventListener("canplaythrough", fetchRev, { once: true });
+
     schedule();
 
     const prev = document.body.style.overflow;
@@ -355,13 +430,14 @@ export default function Walkthrough() {
       raf.current = 0;
       video?.removeEventListener("seeked", onSeeked);
       video?.removeEventListener("loadedmetadata", onSeeked);
+      video?.removeEventListener("canplaythrough", fetchRev);
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
     };
-  }, [go, jumpTo, schedule]);
+  }, [face, go, jumpTo, schedule]);
 
   return (
     <div className="deck">
@@ -369,26 +445,15 @@ export default function Walkthrough() {
 
       <div className="slide-media">
         <video
-          ref={videoRef}
-          src={WALKTHROUGH}
+          ref={revRef}
+          src={WALKTHROUGH_REV}
           muted
           playsInline
-          preload="auto"
-          // Without a camera the stylesheet's full-bleed fit is already right,
-          // and leaving it to CSS means the first paint needs no measurement.
-          style={
-            camera
-              ? {
-                  left: box.x,
-                  top: box.y,
-                  right: "auto",
-                  bottom: "auto",
-                  width: FILM.w * box.scale,
-                  height: FILM.h * box.scale,
-                }
-              : undefined
-          }
+          preload="none"
+          data-off="true"
+          style={mediaStyle}
         />
+        <video ref={videoRef} src={WALKTHROUGH} muted playsInline preload="auto" style={mediaStyle} />
       </div>
       <div className="slide-grade" />
 

@@ -1,6 +1,12 @@
 import manifest from "./walkthrough.json";
 
 export const WALKTHROUGH = "/asset/walkthrough.mp4";
+/**
+ * The same film encoded backwards, so scrolling back can PLAY the footage in
+ * reverse instead of seeking to it frame by frame. Frame k here is frame
+ * (N-1-k) there: a time t on the walkthrough is `revDuration - t` on this.
+ */
+export const WALKTHROUGH_REV = "/asset/walkthrough-rev.mp4";
 export const DURATION = manifest.duration;
 
 /**

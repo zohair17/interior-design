@@ -93,3 +93,45 @@ printf '{\n  "duration": %s,\n  "segments": [%s]\n}\n' "$total" "${offsets%,}" \
   > "$ROOT/src/lib/walkthrough.json"
 
 echo "walkthrough.mp4  ${total}s  $(du -h "$SRC/walkthrough.mp4" | cut -f1)"
+
+# --- the same film, backwards -------------------------------------------------
+#
+# Scrolling back has to run the footage in reverse, and no decoder can do that:
+# playing backwards means one seek per frame, each decoding from the keyframe
+# before it, which is exactly the stutter this is here to remove. So the reverse
+# is encoded once, and going back plays THIS file forwards — hardware decode,
+# same as going forward. Frame k here is frame (N-1-k) there, so the player maps
+# a time t to `revDuration - t`.
+#
+# Reversed in chunks: ffmpeg's `reverse` filter holds every frame it is given in
+# memory, and the whole film at 1600x900 is over a gigabyte of raw frames. The
+# chunks are cut by frame number, not seconds, so the join is exact, and they
+# are concatenated last-first without re-encoding.
+REV_STEP=100
+frames="$("$FFMPEG" -v error -i "$SRC/walkthrough.mp4" -map 0:v -c copy -f null - 2>&1 \
+  | grep -o 'frame= *[0-9]*' | tail -1 | grep -o '[0-9]*')"
+frames="${frames:-0}"
+[ "$frames" -gt 0 ] || { echo "could not count frames"; exit 1; }
+
+rm -f "$WORK/revlist.txt"
+: > "$WORK/revlist.txt"
+a=0
+parts=()
+while [ "$a" -lt "$frames" ]; do
+  b=$(( a + REV_STEP )); [ "$b" -gt "$frames" ] && b="$frames"
+  "$FFMPEG" -v error -y -i "$SRC/walkthrough.mp4" -an \
+    -vf "trim=start_frame=${a}:end_frame=${b},setpts=PTS-STARTPTS,reverse" \
+    -c:v libx264 -preset slow -crf 23 -g 6 -keyint_min 1 -sc_threshold 0 \
+    -pix_fmt yuv420p "$WORK/rev_${a}.mp4"
+  parts=("rev_${a}.mp4" "${parts[@]}")
+  a="$b"
+done
+for p in "${parts[@]}"; do echo "file '${p}'" >> "$WORK/revlist.txt"; done
+
+(
+  cd "$WORK"
+  "$FFMPEG" -v error -y -f concat -safe 0 -i revlist.txt \
+    -an -c copy -movflags +faststart "$SRC/walkthrough-rev.mp4"
+)
+
+echo "walkthrough-rev.mp4  $(probe "$SRC/walkthrough-rev.mp4")s  $(du -h "$SRC/walkthrough-rev.mp4" | cut -f1)"

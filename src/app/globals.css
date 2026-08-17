@@ -126,6 +126,12 @@ body {
   display: block;
   object-fit: cover;
 }
+/* Both films are stacked in the same place — forwards and backwards — and only
+   the one being played is lit. The swap happens on a frame that is already
+   decoded, so it reads as continuous footage rather than a cut. */
+.slide-media video[data-off="true"] {
+  opacity: 0;
+}
 
 /* Just enough grade for white type to hold over the footage. */
 .slide-grade {
