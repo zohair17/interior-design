@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { clamp, smoothstep } from "@/lib/math";
-import { beats, chapters, DURATION, WALKTHROUGH, WALKTHROUGH_REV } from "@/lib/chapters";
+import { beats, chapters, DURATION, FIRST_FRAME, WALKTHROUGH, WALKTHROUGH_REV } from "@/lib/chapters";
 import { FILM, useFilmBox, useIsNarrow } from "@/lib/film";
 import SiteHeader from "@/components/SiteHeader";
 import PortfolioWall from "@/components/PortfolioWall";
@@ -104,6 +104,31 @@ export default function Walkthrough() {
   const revOn = useRef(false);
   /** A landing seek on the forward film, waiting to be shown. */
   const swapping = useRef(false);
+  /** Whether a user gesture has yet asked the film to play. */
+  const primed = useRef(false);
+
+  /**
+   * iOS will not load a video until playback is asked for INSIDE a user
+   * gesture, and until it has played it paints black — which is why the film
+   * never appeared there while the captions kept moving: the scrub waits for
+   * readyState, readyState waits for a play() that only ever ran once the
+   * footage was already loadable. So the first gesture asks it to play, and
+   * stops it again if this move was not going to play anything.
+   */
+  const prime = useCallback(() => {
+    if (primed.current) return;
+    primed.current = true;
+    const v = videoRef.current;
+    if (!v) return;
+    const started = v.play();
+    if (started && started.then) {
+      started
+        .then(() => {
+          if (!playing.current || revOn.current) v.pause();
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   /**
    * Lights one film and darkens the other. Nothing else moves: they are the
@@ -283,6 +308,13 @@ export default function Walkthrough() {
         if (revOn.current) face(false);
         if (rev && !rev.paused) rev.pause();
         if (video && !video.paused) video.pause();
+        // Going back with no reversed film to hand: this move scrubs, and the
+        // fetch starts here because a gesture is the only place iOS will take
+        // the request.
+        if (rev && to < from && rev.preload !== "auto") {
+          rev.preload = "auto";
+          rev.load();
+        }
       }
 
       cursor.current = n;
@@ -330,17 +362,22 @@ export default function Walkthrough() {
     video?.addEventListener("seeked", onSeeked);
     video?.addEventListener("loadedmetadata", onSeeked);
 
-    // The reverse is only wanted once someone scrolls back, and it weighs the
-    // same as the film itself — so it waits for the film it mirrors rather than
-    // competing with it for the connection.
+    // The reverse weighs as much as the film itself, so it waits for the film
+    // it mirrors rather than competing with it for the connection — and on a
+    // phone it does not load at all until someone actually scrolls back. That
+    // is a second decoder and a second download on the device least able to
+    // spare either, for a direction the visitor may never travel.
     const rev = revRef.current;
+    const phone = window.matchMedia("(pointer: coarse)").matches;
     const fetchRev = () => {
       if (!rev || rev.preload === "auto") return;
       rev.preload = "auto";
       rev.load();
     };
-    if (video && video.readyState >= 4) fetchRev();
-    else video?.addEventListener("canplaythrough", fetchRev, { once: true });
+    if (!phone) {
+      if (video && video.readyState >= 4) fetchRev();
+      else video?.addEventListener("canplaythrough", fetchRev, { once: true });
+    }
 
     schedule();
 
@@ -348,6 +385,9 @@ export default function Walkthrough() {
     document.body.style.overflow = "hidden";
 
     const gesture = (dir) => {
+      // Inside the gesture, before anything else: this is the only moment iOS
+      // will accept a request to load and decode the film.
+      prime();
       lastInput.current = performance.now();
       if (locked.current) return;
       locked.current = go(dir);
@@ -414,6 +454,14 @@ export default function Walkthrough() {
       touchPanel = null;
     };
 
+    // A swipe reaches us through touchmove, which does not carry user
+    // activation — Safari counts the touch ending, the pointer going down, a
+    // key. So the unlock listens for those directly rather than riding on the
+    // gesture that follows.
+    const unlock = () => prime();
+    window.addEventListener("pointerdown", unlock, { passive: true });
+    window.addEventListener("touchend", unlock, { passive: true });
+
     window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("keydown", onKey);
     window.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -431,13 +479,15 @@ export default function Walkthrough() {
       video?.removeEventListener("seeked", onSeeked);
       video?.removeEventListener("loadedmetadata", onSeeked);
       video?.removeEventListener("canplaythrough", fetchRev);
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("touchend", unlock);
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
     };
-  }, [face, go, jumpTo, schedule]);
+  }, [face, go, jumpTo, prime, schedule]);
 
   return (
     <div className="deck">
@@ -453,7 +503,15 @@ export default function Walkthrough() {
           data-off="true"
           style={mediaStyle}
         />
-        <video ref={videoRef} src={WALKTHROUGH} muted playsInline preload="auto" style={mediaStyle} />
+        <video
+          ref={videoRef}
+          src={WALKTHROUGH}
+          poster={FIRST_FRAME}
+          muted
+          playsInline
+          preload="auto"
+          style={mediaStyle}
+        />
       </div>
       <div className="slide-grade" />
 

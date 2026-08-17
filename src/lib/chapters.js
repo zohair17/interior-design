@@ -7,6 +7,12 @@ export const WALKTHROUGH = "/asset/walkthrough.mp4";
  * (N-1-k) there: a time t on the walkthrough is `revDuration - t` on this.
  */
 export const WALKTHROUGH_REV = "/asset/walkthrough-rev.mp4";
+/**
+ * The film's own first frame. A video that has never played paints black on
+ * iOS, and iOS will not load one until a gesture asks it to — so without this
+ * the opening screen is black behind the wordmark until the visitor scrolls.
+ */
+export const FIRST_FRAME = "/asset/first-frame.jpg";
 export const DURATION = manifest.duration;
 
 /**
