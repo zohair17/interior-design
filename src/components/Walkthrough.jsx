@@ -30,6 +30,15 @@ const FRAME = 1 / 24;
  */
 const PLAY_MIN = 0.25;
 const PLAY_MAX = 3;
+/**
+ * Going back, the film cuts to just short of the destination and plays the last
+ * moment of that scene into the park. Video decoders cannot run backwards: a
+ * reverse scrub is one seek per frame, each decoding from the keyframe before
+ * it, which is what made scrolling back stutter. This costs one seek instead.
+ */
+const REWIND = 0.42;
+/** Floor on scrub seeks, so a slow decoder is never handed a queue of them. */
+const SEEK_GAP = 66;
 
 /** Where each beat parks the playhead: on its own landing point. */
 const LAND = beats.map((beat) => clamp(beat.at / DURATION, 0, 1));
@@ -82,6 +91,7 @@ export default function Walkthrough() {
   const locked = useRef(false);
   const lastInput = useRef(0);
   const tween = useRef({ from: 0, to: 0, start: 0, dur: 0 });
+  const lastSeek = useRef(0);
 
   const paint = useCallback(function frame() {
     raf.current = 0;
@@ -122,20 +132,28 @@ export default function Walkthrough() {
     const video = videoRef.current;
     let waiting = false;
     if (video && playing.current) {
-      // The decoder is running the scene itself; leave it alone until the glide
-      // is over, then stop it exactly on the beat's frame.
-      if (!moving) {
+      // The decoder is running the scene itself. Stop it on its own clock as
+      // well as the tween's: playback overruns by a frame or two, and a frame
+      // past the mark is the next scene showing through.
+      const end = clamp(tw.to * DURATION, 0, (video.duration || DURATION) - FRAME);
+      const there = !seeking.current && video.currentTime >= end - FRAME * 0.5;
+      if (!moving || there) {
         playing.current = false;
         video.pause();
-        video.currentTime = clamp(t, 0, (video.duration || DURATION) - FRAME);
+        // Re-seeking a frame the decoder has already drawn makes it flicker;
+        // only correct a drift worth correcting.
+        if (Math.abs(video.currentTime - end) >= FRAME) video.currentTime = end;
+        // The copy lands with the film rather than a beat behind it.
+        if (moving) tween.current = { ...tw, dur: 0 };
       }
-    } else if (video && !seeking.current) {
+    } else if (video && !seeking.current && (!moving || now - lastSeek.current >= SEEK_GAP)) {
       if (video.readyState < 1) {
         waiting = true;
       } else {
         const want = clamp(t, 0, (video.duration || DURATION) - FRAME);
         if (Math.abs(video.currentTime - want) >= FRAME * 0.5) {
           seeking.current = true;
+          lastSeek.current = now;
           video.currentTime = want;
         }
       }
@@ -178,13 +196,30 @@ export default function Walkthrough() {
       // rest still scrubs, and either way the beat lands on the same frame.
       const video = videoRef.current;
       const rate = dur > 0 ? crossed / (dur / 1000) : 0;
-      const canPlay =
-        video && to > from && dur > 0 && rate >= PLAY_MIN && rate <= PLAY_MAX && video.readyState >= 2;
+      const ready = video && video.readyState >= 2 && dur > 0;
+      const canPlay = ready && to > from && rate >= PLAY_MIN && rate <= PLAY_MAX;
+      // Backwards is the same trick from the other side: one seek to a moment
+      // short of the destination, then let it play in. Scrubbing back frame by
+      // frame is what lagged.
+      const canRewind = ready && to < from && crossed > REWIND;
 
-      tween.current = { from, to, start: performance.now(), dur, linear: canPlay };
+      if (canRewind) {
+        const land = to * DURATION;
+        seeking.current = true;
+        lastSeek.current = performance.now();
+        video.currentTime = Math.max(0, land - REWIND);
+      }
 
-      if (canPlay) {
-        video.playbackRate = rate;
+      tween.current = {
+        from,
+        to,
+        start: performance.now(),
+        dur: canRewind ? Math.max(dur * 0.6, REWIND * 1000) : dur,
+        linear: canPlay || canRewind,
+      };
+
+      if (canPlay || canRewind) {
+        video.playbackRate = canRewind ? 1 : rate;
         playing.current = true;
         Promise.resolve(video.play()).catch(() => {
           playing.current = false;

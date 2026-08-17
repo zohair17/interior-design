@@ -129,13 +129,21 @@ const spec = [
   },
 ];
 
+/**
+ * Two frames of headroom before every cut. A chapter's range runs to where the
+ * next one starts, so parking on that number parks on the FIRST frame of the
+ * next scene — the flash at the end of every chapter. Playback can also run a
+ * frame past the mark before the loop catches it; this absorbs both.
+ */
+const CUT = 2 / 24;
+
 export const chapters = spec.map(({ scene, head = 0, tail = 0, ...rest }) => {
   const seg = manifest.segments.find((s) => s.file === scene);
   if (!seg) throw new Error(`No segment for ${scene}; re-run build-walkthrough.sh`);
   return {
     ...rest,
     from: seg.start + head,
-    to: seg.start + seg.duration - tail,
+    to: seg.start + seg.duration - Math.max(tail, CUT),
   };
 });
 
