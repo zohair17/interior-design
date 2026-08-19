@@ -165,6 +165,21 @@ body {
   align-items: center;
   text-align: center;
 }
+/* Centred copy lands wherever the shot is brightest — a pale floor, a lit
+   wall — so it carries its own pool of shade rather than relying on the
+   corner grade, which only darkens the edges. */
+.slide-copy--center::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(120vw, 1400px);
+  height: min(90vh, 760px);
+  transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, rgba(11, 11, 12, 0.68) 0%, rgba(11, 11, 12, 0.5) 42%, rgba(11, 11, 12, 0.18) 72%, transparent 100%);
+  pointer-events: none;
+  z-index: -1;
+}
 @media (min-width: 768px) {
   .slide-copy { padding: 7rem 4rem 6rem; }
 }
@@ -186,7 +201,9 @@ body {
   text-wrap: balance;
   color: var(--bone);
   /* Wide and soft: lifts the type off the footage without reading as a shadow. */
-  text-shadow: 0 2px 40px rgba(11, 11, 12, 0.55);
+  text-shadow:
+    0 1px 2px rgba(11, 11, 12, 0.55),
+    0 2px 34px rgba(11, 11, 12, 0.85);
 }
 
 .slide-lead {
@@ -197,8 +214,10 @@ body {
   font-size: clamp(1.0625rem, 1.2vw, 1.2rem);
   line-height: 1.72;
   letter-spacing: -0.004em;
-  color: rgba(244, 242, 238, 0.82);
-  text-shadow: 0 1px 24px rgba(11, 11, 12, 0.5);
+  color: rgba(244, 242, 238, 0.92);
+  text-shadow:
+    0 1px 2px rgba(11, 11, 12, 0.5),
+    0 2px 22px rgba(11, 11, 12, 0.8);
 }
 
 .service-copy {
