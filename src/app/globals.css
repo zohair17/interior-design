@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ------------------------------------------------------------------
-   MILO INTERIEUR - design tokens
+   VYN INTERIOR - design tokens
    ------------------------------------------------------------------ */
 :root {
   --ink: #0b0b0c;
@@ -63,18 +63,20 @@ body {
 }
 
 .eyebrow {
-  font-size: 0.7rem;
-  letter-spacing: 0.32em;
+  font-size: 0.6875rem;
+  letter-spacing: 0.34em;
   text-transform: uppercase;
   font-weight: 500;
-  color: rgba(244, 242, 238, 0.78);
+  color: rgba(244, 242, 238, 0.72);
+  text-shadow: 0 1px 18px rgba(11, 11, 12, 0.6);
 }
 
 .rule-label {
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   font-size: 0.6875rem;
+  font-weight: 500;
 }
 
 /* Film grain - pure CSS, no asset request. */
@@ -172,11 +174,15 @@ body {
 
 .slide-head {
   font-family: var(--font-serif), Georgia, serif;
-  font-weight: 400;
-  line-height: 1.0;
-  letter-spacing: -0.018em;
-  font-size: clamp(2.4rem, 5vw, 4.4rem);
-  margin-top: 1.15rem;
+  /* Light, large and close-set. A headline over moving footage wants size and
+     air more than it wants weight — weight is what made it look like a caption
+     printed on the film rather than a title held above it. */
+  font-weight: 300;
+  font-optical-sizing: auto;
+  line-height: 1.04;
+  letter-spacing: -0.022em;
+  font-size: clamp(2.75rem, 5.6vw, 5.25rem);
+  margin-top: 1.4rem;
   text-wrap: balance;
   color: var(--bone);
   /* Wide and soft: lifts the type off the footage without reading as a shadow. */
@@ -184,11 +190,14 @@ body {
 }
 
 .slide-lead {
-  margin-top: 1.5rem;
-  max-width: 36rem;
-  font-size: clamp(1rem, 1.12vw, 1.15rem);
-  line-height: 1.65;
-  color: rgba(244, 242, 238, 0.84);
+  margin-top: 1.6rem;
+  /* Measure, not width: about 62 characters is where a line stops being read
+     and starts being scanned. */
+  max-width: 34rem;
+  font-size: clamp(1.0625rem, 1.2vw, 1.2rem);
+  line-height: 1.72;
+  letter-spacing: -0.004em;
+  color: rgba(244, 242, 238, 0.82);
   text-shadow: 0 1px 24px rgba(11, 11, 12, 0.5);
 }
 
@@ -197,9 +206,18 @@ body {
 }
 
 /* Intro title card */
-.intro-logo {
-  width: clamp(260px, 30vw, 460px);
+.header-mark {
+  width: clamp(96px, 9vw, 132px);
   height: auto;
+  display: block;
+}
+
+.intro-place {
+  /* The only type on the opening screen, so it can afford the room. */
+  font-size: 0.75rem;
+  letter-spacing: 0.42em;
+  color: rgba(244, 242, 238, 0.72);
+  text-shadow: 0 1px 22px rgba(11, 11, 12, 0.7);
 }
 
 /* ==================================================================
@@ -321,23 +339,25 @@ body {
 }
 .values-head {
   font-family: var(--font-display), system-ui, sans-serif;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: -0.025em;
-  line-height: 1.0;
-  font-size: clamp(1.9rem, 4.2vw, 3.5rem);
-  margin-top: 1rem;
+  letter-spacing: -0.028em;
+  line-height: 0.98;
+  font-size: clamp(2.1rem, 4.6vw, 3.9rem);
+  margin-top: 1.15rem;
 }
 .values-name {
-  margin-top: 1.7rem;
+  margin-top: 1.9rem;
   font-family: var(--font-serif), Georgia, serif;
-  font-size: clamp(1.25rem, 1.9vw, 1.65rem);
+  font-weight: 400;
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  letter-spacing: -0.01em;
 }
 .values-role {
-  margin-top: 0.4rem;
+  margin-top: 0.5rem;
   font-size: 0.8125rem;
-  letter-spacing: 0.01em;
-  color: rgba(244, 242, 238, 0.68);
+  letter-spacing: 0.02em;
+  color: rgba(244, 242, 238, 0.62);
 }
 
 .ghost-button {
@@ -389,7 +409,9 @@ body {
 }
 .contact-lines a {
   font-family: var(--font-serif), Georgia, serif;
-  font-size: clamp(1.3rem, 2.2vw, 1.95rem);
+  font-weight: 300;
+  font-size: clamp(1.45rem, 2.4vw, 2.2rem);
+  letter-spacing: -0.015em;
   transition: opacity 300ms;
 }
 .contact-lines a:hover {
@@ -397,12 +419,13 @@ body {
 }
 
 .contact-offices {
-  margin-top: 2rem;
+  margin-top: 2.25rem;
   display: flex;
   flex-wrap: wrap;
-  gap: 2.5rem;
-  font-size: 0.8125rem;
-  color: rgba(244, 242, 238, 0.66);
+  gap: 2.75rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: rgba(244, 242, 238, 0.64);
 }
 .contact-offices .rule-label {
   color: rgba(244, 242, 238, 0.45);
@@ -508,7 +531,8 @@ body {
 .deck-dot-label {
   order: 1;
   font-size: 0.625rem;
-  letter-spacing: 0.2em;
+  font-weight: 500;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   opacity: 0;
   transform: translateX(8px);
@@ -649,21 +673,22 @@ body {
     padding: 5.75rem 2.4rem 4.5rem 1.35rem;
   }
   .slide-head {
-    font-size: clamp(1.95rem, 8.4vw, 2.7rem);
+    font-size: clamp(2.15rem, 9.2vw, 3rem);
     margin-top: 0.9rem;
   }
   .slide-lead {
-    margin-top: 1.1rem;
-    font-size: 0.9375rem;
-    line-height: 1.6;
-    max-width: none;
+    margin-top: 1.2rem;
+    font-size: 1rem;
+    line-height: 1.68;
+    max-width: 32ch;
   }
   .eyebrow {
     font-size: 0.625rem;
     letter-spacing: 0.26em;
   }
-  .intro-logo {
-    width: min(70vw, 300px);
+  .intro-place {
+    font-size: 0.625rem;
+    letter-spacing: 0.3em;
   }
   .slide-copy--center .rule-label {
     font-size: 0.5625rem;
@@ -689,7 +714,7 @@ body {
     max-width: none;
   }
   .values-head {
-    font-size: clamp(1.7rem, 7.6vw, 2.4rem);
+    font-size: clamp(1.85rem, 8.2vw, 2.6rem);
   }
   .values-name {
     margin-top: 1.1rem;

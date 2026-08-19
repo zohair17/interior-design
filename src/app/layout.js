@@ -1,4 +1,4 @@
-import { Archivo, Inter, Instrument_Serif } from "next/font/google";
+import { Archivo, Inter_Tight, Newsreader } from "next/font/google";
 import "./globals.css";
 import { site } from "@/lib/site";
 
@@ -8,16 +8,21 @@ const archivo = Archivo({
   display: "swap",
 });
 
-const inter = Inter({
+// Inter Tight over Inter: at the sizes this site sets labels and running copy,
+// the tighter fit reads as drawn for the layout rather than defaulted into it.
+const inter = Inter_Tight({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
 });
 
-const instrument = Instrument_Serif({
+// The headline face. Newsreader is cut for text, so it holds its shape at the
+// small sizes too — and its light weights carry the large ones without the
+// display-serif fragility that made the old headlines look thin over footage.
+const serif = Newsreader({
   variable: "--font-instrument",
   subsets: ["latin"],
-  weight: "400",
+  weight: ["300", "400", "500"],
   style: ["normal", "italic"],
   display: "swap",
 });
@@ -41,7 +46,7 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${archivo.variable} ${inter.variable} ${instrument.variable} antialiased`}
+      className={`${archivo.variable} ${inter.variable} ${serif.variable} antialiased`}
     >
       <body>
         {children}

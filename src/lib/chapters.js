@@ -31,10 +31,10 @@ const spec = [
     kind: "statement",
     scene: "Scene1.mp4",
     nav: "Interior design",
-    eyebrow: "MILO Interieur GmbH",
+    eyebrow: "VYN Interior GmbH",
     title: "Interior design in the building:",
     lead: "Our goal is to put your interior design theory into practice and transform your property into a functional and aesthetically pleasing environment.",
-    meta: "Kreuzlingen · Wallisellen · Switzerland",
+    meta: "Zürich · Zug · Switzerland",
   },
   {
     id: "floor-coverings",

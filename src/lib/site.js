@@ -1,22 +1,22 @@
 export const site = {
-  name: "MILO INTERIEUR",
-  legal: "MILO INTERIEUR GmbH",
+  name: "VYN INTERIOR",
+  legal: "VYN Interior GmbH",
   tagline: "Interior design in the building",
   mission:
     "Our goal is to put your interior design theory into practice and transform your property into a functional and aesthetically pleasing environment.",
-  email: "hello@milointerieur.ch",
-  phone: "+41 71 520 61 61",
-  phoneHref: "+41715206161",
+  email: "hello@vyninterior.ch",
+  phone: "+41 44 512 08 40",
+  phoneHref: "+41445120840",
   offices: [
     {
-      label: "Office Thurgau",
-      lines: ["Hauptstrasse 43", "8280 Kreuzlingen"],
-      phone: "+41 71 520 61 61",
-      phoneHref: "+41715206161",
+      label: "Office Zürich",
+      lines: ["Seefeldstrasse 62", "8008 Zürich"],
+      phone: "+41 44 512 08 40",
+      phoneHref: "+41445120840",
     },
     {
-      label: "Office Wallisellen",
-      lines: ["R2 Tower, Richtistrasse 2", "8304 Wallisellen"],
+      label: "Office Zug",
+      lines: ["Baarerstrasse 78", "6300 Zug"],
     },
   ],
   socials: [

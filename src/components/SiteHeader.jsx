@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { site } from "@/lib/site";
@@ -30,9 +31,16 @@ export default function SiteHeader({ index, onNav }) {
     <>
       <header className="deck-header">
         <button type="button" onClick={() => jump(0)} className="text-left">
-          <span className="font-display block text-sm tracking-[0.24em] uppercase">
-            {site.name}
-          </span>
+          {/* The drawn mark, where a mark belongs. Scene 1 carries it on the
+              building itself, so the opening card does not repeat it. */}
+          <Image
+            src="/Logo.png"
+            alt={site.name}
+            width={2135}
+            height={736}
+            priority
+            className="header-mark"
+          />
           <span className="rule-label header-tagline block opacity-55">{site.tagline}</span>
         </button>
 

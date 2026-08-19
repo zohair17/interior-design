@@ -9,6 +9,7 @@ import SiteHeader from "@/components/SiteHeader";
 import PortfolioWall from "@/components/PortfolioWall";
 import ValuesCard from "@/components/ValuesCard";
 import ContactForm from "@/components/ContactForm";
+import { site } from "@/lib/site";
 
 const N = chapters.length;
 const LAST = beats.length - 1;
@@ -592,16 +593,11 @@ export default function Walkthrough() {
 function LogoCard({ chapter }) {
   return (
     <div className="slide-copy slide-copy--center">
-      {/* No eyebrow: the wordmark already carries the company name. */}
-      <Image
-        src="/Logo.avif"
-        alt="MILO INTERIEUR"
-        width={832}
-        height={188}
-        priority
-        className="intro-logo"
-      />
-      <p className="rule-label mt-10 text-bone/60">{chapter.meta}</p>
+      {/* No wordmark laid over the film: the building in this shot carries the
+          name on its own facade, and printing it twice on one screen reads as
+          a mistake. The card gives it the places instead. */}
+      <h1 className="sr-only">{site.name}</h1>
+      <p className="rule-label intro-place">{chapter.meta}</p>
     </div>
   );
 }
