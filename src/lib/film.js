@@ -34,10 +34,16 @@ export const WALL = {
 };
 
 /**
- * Below this width the film is cropped hard enough by a full-bleed fit that
- * framing becomes a per-beat decision rather than one global crop.
+ * When the viewport is this shape, a full-bleed fit crops the film hard enough
+ * that framing becomes a per-beat decision rather than one global crop.
+ *
+ * Width alone was not the test. A tablet held upright is 768px wide and still
+ * portrait, so cover pushed the film far wider than the screen and hung the
+ * portfolio wall off both edges — the phone camera, which pulls back until the
+ * wall is in shot, was the thing it needed. Any viewport no wider than it is
+ * tall gets it.
  */
-const NARROW = "(max-width: 767px)";
+const NARROW = "(max-width: 767px), (max-aspect-ratio: 1/1)";
 
 export function useIsNarrow() {
   const [narrow, setNarrow] = useState(false);
