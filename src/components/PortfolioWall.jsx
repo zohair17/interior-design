@@ -11,7 +11,7 @@ import { WALL, place } from "@/lib/film";
  */
 const works = Array.from({ length: 9 }, (_, i) => ({
   id: `P${i + 1}`,
-  src: `/asset/Portfolio/P${i + 1}.png`,
+  src: `/asset/Portfolio/P${i + 1}.jpg`,
   label: `Project ${String(i + 1).padStart(2, "0")}`,
   // href: `/portfolio/project-${i + 1}`,   // TODO: link each frame to its project page
 }));
@@ -68,14 +68,19 @@ export default function PortfolioWall({ chapter, show, box, narrow }) {
               transition={{ type: "spring", stiffness: 320, damping: 26 }}
               // onClick={() => router.push(work.href)}
             >
-              <Image
-                src={work.src}
-                alt={work.label}
-                fill
-                sizes="(max-width: 767px) 45vw, 22vw"
-                className="wall-shot"
-              />
-              <span className="wall-caption">{work.label}</span>
+              {/* The moulding is the button itself; the mount is the window
+                  cut in it, and the photograph sits inside that — the way a
+                  framed piece hangs, rather than a picture stuck to a wall. */}
+              <span className="wall-mount">
+                <Image
+                  src={work.src}
+                  alt={work.label}
+                  fill
+                  sizes="(max-width: 767px) 45vw, 22vw"
+                  className="wall-shot"
+                />
+                <span className="wall-caption">{work.label}</span>
+              </span>
             </motion.button>
           </motion.li>
         ))}

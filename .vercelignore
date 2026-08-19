@@ -8,3 +8,7 @@ public/asset/OLD
 Ref Images
 prompt.md
 .walkthrough-build
+
+# Stray working copies inside the asset folders
+public/asset/Portfolio/OLD
+public/asset/Portfolio/*.mp4

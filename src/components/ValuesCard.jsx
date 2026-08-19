@@ -26,7 +26,7 @@ export default function ValuesCard({ chapter, show, box, narrow }) {
         transition={{ duration: show ? 0.22 : 0.12, ease: "linear" }}
       >
         <Image
-          src="/asset/Milo.avif"
+          src="/asset/Milo.png"
           alt={chapter.name}
           fill
           sizes="(max-width: 767px) 80vw, 30vw"

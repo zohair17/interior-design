@@ -126,8 +126,8 @@ const spec = [
     nav: "About",
     eyebrow: "About",
     title: "We stand up for our values.",
-    name: "Michel Milo",
-    role: "Founder, MILO Interieur GmbH",
+    name: "Elias Brunner",
+    role: "Founder, VYN Interior",
     cta: "About",
   },
   {

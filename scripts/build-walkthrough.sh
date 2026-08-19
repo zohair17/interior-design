@@ -88,6 +88,13 @@ done
     -pix_fmt yuv420p -movflags +faststart "$SRC/walkthrough.mp4"
 )
 
+# The film's own first frame, as the video element's poster. A video that has
+# never played paints black on iOS, and iOS will not load one until a gesture
+# asks it to — so without this the opening screen is black until the first
+# scroll. It has to be rebuilt with the film or it shows a frame that is gone.
+"$FFMPEG" -v error -y -i "$SRC/walkthrough.mp4" -vf "select=eq(n\,0),scale=1280:-2" \
+  -vsync 0 -frames:v 1 -q:v 5 "$SRC/first-frame.jpg"
+
 total="$(probe "$SRC/walkthrough.mp4")"
 printf '{\n  "duration": %s,\n  "segments": [%s]\n}\n' "$total" "${offsets%,}" \
   > "$ROOT/src/lib/walkthrough.json"
@@ -108,7 +115,7 @@ echo "walkthrough.mp4  ${total}s  $(du -h "$SRC/walkthrough.mp4" | cut -f1)"
 # chunks are cut by frame number, not seconds, so the join is exact, and they
 # are concatenated last-first without re-encoding.
 REV_STEP=100
-frames="$("$FFMPEG" -v error -i "$SRC/walkthrough.mp4" -map 0:v -c copy -f null - 2>&1 \
+frames="$("$FFMPEG" -v error -stats -i "$SRC/walkthrough.mp4" -map 0:v -c copy -f null - 2>&1 \
   | grep -o 'frame= *[0-9]*' | tail -1 | grep -o '[0-9]*')"
 frames="${frames:-0}"
 [ "$frames" -gt 0 ] || { echo "could not count frames"; exit 1; }
