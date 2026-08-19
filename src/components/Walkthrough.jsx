@@ -593,10 +593,14 @@ export default function Walkthrough() {
 function LogoCard({ chapter }) {
   return (
     <div className="slide-copy slide-copy--center">
-      {/* No wordmark laid over the film: the building in this shot carries the
-          name on its own facade, and printing it twice on one screen reads as
-          a mistake. The card gives it the places instead. */}
-      <h1 className="sr-only">{site.name}</h1>
+      <Image
+        src="/Logo.png"
+        alt={site.name}
+        width={1200}
+        height={416}
+        priority
+        className="hero-logo"
+      />
       <p className="rule-label intro-place">{chapter.meta}</p>
     </div>
   );

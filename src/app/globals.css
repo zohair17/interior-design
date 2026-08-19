@@ -212,6 +212,16 @@ body {
   display: block;
 }
 
+.hero-logo {
+  display: block;
+  width: min(54vw, 620px);
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
+  margin: 0 auto 1.25rem;
+  filter: drop-shadow(0 10px 28px rgba(11, 11, 12, 0.45));
+}
+
 .intro-place {
   /* The only type on the opening screen, so it can afford the room. */
   font-size: 0.75rem;
